@@ -1,0 +1,23 @@
+{
+  "name": "poller",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun --hot src/index.ts"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/ws": "^8.18.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@repo/redis": "workspace:*",
+    "@repo/types": "workspace:*",
+    "dotenv": "^17.2.2",
+    "ws": "^8.18.3"
+  }
+}
