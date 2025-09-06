@@ -1,12 +1,21 @@
 import { WebSocket } from "ws";
 import "dotenv/config";
 import { publisher } from "@repo/redis/pubsub";
+import { priceUpdatePusher } from "@repo/redis/queue";
 import { BackpackDataType, FilteredDataType } from "@repo/types/types";
+
+let lastInsertTime = Date.now();
+let assetPrices: Record<string, FilteredDataType> = {
+  ETH_USDC_PERP: { ask_price: 0, bid_price: 0, decimal: 0 },
+  SOL_USDC_PERP: { ask_price: 0, bid_price: 0, decimal: 0 },
+  BTC_USDC_PERP: { ask_price: 0, bid_price: 0, decimal: 0 },
+};
 
 const ws = new WebSocket(process.env.BACKPACK_URL!);
 
 (async () => {
   await publisher.connect();
+  await priceUpdatePusher.connect();
 })();
 
 ws.onopen = () => {
@@ -40,11 +49,34 @@ ws.onmessage = async (msg) => {
   const bid_price = Number(bidPriceIntStr);
 
   const filteredData: FilteredDataType = {
-    asset: data.s,
     ask_price,
     bid_price,
     decimal: 4,
   };
 
-  await publisher.publish("trade-info", JSON.stringify(filteredData));
+  // await publisher.publish("trade-info", JSON.stringify(filteredData));
+
+  assetPrices[data.s] = filteredData;
+
+  if (Date.now() - lastInsertTime > 100) {
+    let dataToBeSent: Record<string, FilteredDataType> = {};
+
+    for (const [key, value] of Object.entries(assetPrices)) {
+      if (value.ask_price === 0) {
+        continue;
+      }
+      dataToBeSent[key] = value;
+    }
+
+    publisher.publish("ws:price:update", JSON.stringify(dataToBeSent));
+
+    priceUpdatePusher.xAdd("stream:trade:info", "*", {
+      type: "price-update",
+      trade: JSON.stringify(dataToBeSent),
+    });
+
+    console.log(dataToBeSent);
+
+    lastInsertTime = Date.now();
+  }
 };

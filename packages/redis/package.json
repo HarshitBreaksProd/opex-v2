@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "exports": {
+    "./queue": "./src/queue.ts",
     "./pubsub": "./src/pubsub.ts"
   },
   "scripts": {

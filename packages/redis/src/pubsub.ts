@@ -1,6 +1,6 @@
 import { RedisClientType } from "redis";
-import { client } from ".";
+import redisClient from "./index";
 
-export const publisher: RedisClientType = client.duplicate();
+export const publisher: RedisClientType = redisClient.duplicate();
 
-export const subscriber: RedisClientType = client.duplicate();
+export const subscriber: RedisClientType = redisClient.duplicate();
