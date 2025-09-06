@@ -10,3 +10,5 @@ export const enginePuller: RedisClientType = redisClient.duplicate();
 export const enginePusher: RedisClientType = redisClient.duplicate();
 
 export const engineResponsePuller: RedisClientType = redisClient.duplicate();
+
+export const httpPusher: RedisClientType = redisClient.duplicate();

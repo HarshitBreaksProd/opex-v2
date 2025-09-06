@@ -1,5 +1,5 @@
 import { enginePuller, enginePusher } from "@repo/redis/queue";
-import { FilteredDataType } from "@repo/types/types";
+import { FilteredDataType, UserBalance } from "@repo/types/types";
 
 const currentPrice: Record<string, FilteredDataType> = {
   BTC_USDC_PERP: {
@@ -19,13 +19,17 @@ const currentPrice: Record<string, FilteredDataType> = {
   },
 };
 
+const openOrders: Record<string, > = {};
+
+const userBalances: Record<string, UserBalance> = {};
+
 (async () => {
   await enginePuller.connect();
   await enginePusher.connect();
 
   while (true) {
     const res = await enginePuller.xRead(
-      { key: "stream:trade:info", id: "$" },
+      { key: "stream:app:info", id: "$" },
       {
         BLOCK: 0,
         COUNT: 1,
@@ -56,16 +60,23 @@ const currentPrice: Record<string, FilteredDataType> = {
         let trade = JSON.parse(res[0].messages[0].message.trade);
 
         // business logic takes place
-        
-        await enginePusher.xAdd("stream:trade:acknowledgement", "*", {
+
+        await enginePusher.xAdd("stream:engine:response", "*", {
           type: "trade-acknowledgement",
           message: JSON.stringify({
-            id: trade.id,
+            resId: trade.id,
             message: "Trade executed succesfully",
           }),
         });
 
         console.log("Response Sent");
+      }
+
+      if (
+        res[0]?.messages[0]?.message.type === "user-signup" &&
+        res[0].messages[0].message
+      ) {
+        const { email, resId } = res[0].messages[0].message;
       }
     }
   }

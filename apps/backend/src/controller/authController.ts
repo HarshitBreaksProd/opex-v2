@@ -2,6 +2,12 @@ import { Request, Response } from "express";
 import { authBodySchema } from "@repo/types/zodSchema";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/sendEmail";
+import { httpPusher } from "@repo/redis/queue";
+import { responseLoopObj } from "../utils/responseLoop";
+
+(async () => {
+  await httpPusher.connect();
+})();
 
 export const emailGenController = async (req: Request, res: Response) => {
   const validInput = authBodySchema.safeParse(req.body);
@@ -17,16 +23,34 @@ export const emailGenController = async (req: Request, res: Response) => {
 
   const jwtToken = jwt.sign(email, process.env.JWT_SECRET!);
 
-  const { data, error } = await sendEmail(email, jwtToken);
+  try {
+    const resId = Date.now().toString() + crypto.randomUUID();
 
-  if (error) {
-    res.status(400).json({ error });
-    return;
+    await httpPusher.xAdd("stream:app:info", "*", {
+      type: "user-signup",
+      email: email,
+      resId,
+    });
+
+    await responseLoopObj.waitForResponse(resId);
+
+    console.log("recieved");
+
+    // const { data, error } = await sendEmail(email, jwtToken);
+
+    // if (error) {
+    //   res.status(400).json({ error });
+    //   return;
+    // }
+
+    res.json({
+      message: "Email sent",
+    });
+  } catch (err) {
+    res.status(400).json({
+      message: "Could not sign in",
+    });
   }
-
-  res.json({
-    message: "Email sent",
-  });
 };
 
 export const signinController = async (req: Request, res: Response) => {
@@ -40,12 +64,7 @@ export const signinController = async (req: Request, res: Response) => {
     return;
   }
 
-  const decodedToken = jwt.verify(token, process.env.JWT_SECRET!);
-
   res.cookie("jwt", token);
-  res.cookie("email", decodedToken.toString());
 
-  res.json({
-    message: "Logged in",
-  });
+  res.status(301).redirect("http://localhost:3000/trade/");
 };

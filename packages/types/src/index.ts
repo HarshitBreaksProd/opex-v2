@@ -15,3 +15,13 @@ export type FilteredDataType = {
   bid_price: number;
   decimal: number;
 };
+
+export type UserBalance = {
+  usdInt: number;
+  decimal: number;
+};
+
+export type OpenOrders = {
+  openPriceInt: number;
+  openPriceDecPos: number;
+};
