@@ -35,3 +35,11 @@ export type OpenOrders = {
   quantity: number;
   type: OrderType;
 };
+
+export type AssetBalance = Record<
+  string,
+  {
+    balance: number;
+    decimal: number;
+  }
+>;

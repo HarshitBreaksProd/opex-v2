@@ -1,6 +1,7 @@
 import prismaClient from "@repo/db/client";
 import { enginePuller, enginePusher } from "@repo/redis/queue";
 import {
+  AssetBalance,
   FilteredDataType,
   OpenOrders,
   OrderType,
@@ -67,9 +68,6 @@ const userBalances: Record<string, UserBalance> = {};
             message: "User added to in memory successfully",
           }),
         });
-
-        console.log(userBalances);
-        console.log(openOrders);
       } else if (reqType === "price-update") {
         const tradePrices = JSON.parse(
           res[0]!.messages[0]?.message.tradePrices!
@@ -128,22 +126,14 @@ const userBalances: Record<string, UserBalance> = {};
 
         const margin = (openPrice * tradeInfo.quantity) / 10 ** 4;
 
-        console.log("after Margin");
-        console.log(openPrice, tradeInfo.quantity);
-
         const marginStr = margin.toFixed(4);
         const marginIntStr = marginStr.split(".")[0] + marginStr.split(".")[1]!;
         const marginInt = Number(marginIntStr);
-
-        console.log("almost Margin");
-        console.log(margin, marginInt);
 
         const currentBalance = userBalances[userId!]!.balance;
         const newBal = currentBalance! - marginInt;
 
         if (newBal < 0) {
-          console.log("fail bal");
-          console.log(currentBalance, newBal);
           await enginePusher.xAdd("stream:engine:response", "*", {
             type: "trade-open-err",
             reqId,
@@ -186,10 +176,6 @@ const userBalances: Record<string, UserBalance> = {};
           }),
         });
 
-        console.log(currentPrice);
-        console.log(userBalances);
-        console.log(openOrders);
-
         // Trade Close
       } else if (reqType === "trade-close") {
         const orderId = res[0]?.messages[0]?.message.orderId!;
@@ -207,9 +193,14 @@ const userBalances: Record<string, UserBalance> = {};
           continue;
         }
 
-        const order = openOrders[userId]?.filter((o) => {
-          o.id === orderId;
-        })[0];
+        let order: OpenOrders | undefined;
+
+        openOrders[userId]?.forEach((o) => {
+          if (o.id === orderId) {
+            console.log(o);
+            order = o;
+          }
+        });
 
         if (!order) {
           await enginePusher.xAdd("stream:engine:response", "*", {
@@ -235,7 +226,7 @@ const userBalances: Record<string, UserBalance> = {};
           priceChange = order.openPrice - closePrice;
         }
 
-        pnl = priceChange * order.leverage * order.quantity;
+        pnl = (priceChange * order.leverage * order.quantity) / 10 ** 4;
 
         const pnlStr = pnl.toFixed(4);
         const pnlIntStr = pnlStr.split(".")[0] + pnlStr.split(".")[1]!;
@@ -275,10 +266,65 @@ const userBalances: Record<string, UserBalance> = {};
             orderId,
           }),
         });
+      } else if (reqType === "get-asset-bal") {
+        const userId = res[0]?.messages[0]?.message.userId!;
+
+        let assetBal: AssetBalance = {
+          BTC_USDC_PERP: {
+            balance: 0,
+            decimal: 4,
+          },
+          SOL_USDC_PERP: {
+            balance: 0,
+            decimal: 4,
+          },
+          ETH_USDC_PERP: {
+            balance: 0,
+            decimal: 4,
+          },
+        };
+
+        openOrders[userId]?.forEach((o) => {
+          if (o.type === "long") {
+            assetBal[o.asset]!.balance += o.margin;
+          } else {
+            assetBal[o.asset]!.balance -= o.margin;
+          }
+        });
+
+        await enginePusher.xAdd("stream:engine:response", "*", {
+          type: "get-asset-bal-ack",
+          reqId,
+          response: JSON.stringify({ assetBal }),
+        });
+      } else if (reqType === "get-user-bal") {
+        const userId = res[0]?.messages[0]?.message.userId!;
+
+        const userBal = userBalances[userId];
+
+        if (!userBal) {
+          await enginePusher.xAdd("stream:engine:response", "*", {
+            type: "get-user-bal-err",
+            reqId,
+            response: JSON.stringify({
+              message:
+                "User does not exists (User not found in balances array)",
+            }),
+          });
+          continue;
+        }
+
+        await enginePusher.xAdd("stream:engine:response", "*", {
+          type: "get-user-bal-ack",
+          reqId,
+          response: JSON.stringify({ userBal }),
+        });
+
+        console.log(openOrders);
+
+        console.log(userBalances);
 
         console.log(currentPrice);
-        console.log(userBalances);
-        console.log(openOrders);
       }
     }
   }

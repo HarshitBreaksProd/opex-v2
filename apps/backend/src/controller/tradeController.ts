@@ -62,7 +62,6 @@ export const closeTradeController = async (req: Request, res: Response) => {
     });
 
     await responseLoopObj.waitForResponse(reqId);
-    console.log("recieved");
     res.json({ message: "Trade Closed" });
   } catch (err) {
     console.log(err);

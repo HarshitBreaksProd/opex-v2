@@ -34,6 +34,7 @@ model ExistingTrades {
   leverage   Int
   asset      String
   margin     Int
+  quantity   Float
   type       OrderType
   closePrice Int
   pnl        Int

@@ -33,7 +33,7 @@ export const emailGenController = async (req: Request, res: Response) => {
 
     let user = userFound;
 
-    if (!userFound?.balance) {
+    if (!userFound) {
       const dbRes = await prismaClient.users.create({
         data: {
           email: email,
