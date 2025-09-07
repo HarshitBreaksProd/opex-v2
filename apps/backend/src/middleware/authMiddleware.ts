@@ -18,7 +18,7 @@ export const authMiddleware = (
     return;
   }
 
-  (req as unknown as { email: string }).email = decodedToken;
+  (req as unknown as { userId: string }).userId = decodedToken;
 
   next();
 };

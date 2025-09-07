@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@repo/db": "workspace:*",
     "@repo/redis": "workspace:*",
     "@types/cookie-parser": "^1.4.9",
     "cookie-parser": "^1.4.7",

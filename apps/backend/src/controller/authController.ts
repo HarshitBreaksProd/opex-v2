@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { sendEmail } from "../utils/sendEmail";
 import { httpPusher } from "@repo/redis/queue";
 import { responseLoopObj } from "../utils/responseLoop";
+import prismaClient from "@repo/db/client";
 
 (async () => {
   await httpPusher.connect();
@@ -21,35 +22,55 @@ export const emailGenController = async (req: Request, res: Response) => {
 
   const email = validInput.data.email;
 
-  const jwtToken = jwt.sign(email, process.env.JWT_SECRET!);
-
   try {
-    const resId = Date.now().toString() + crypto.randomUUID();
+    const reqId = Date.now().toString() + crypto.randomUUID();
+
+    const userFound = await prismaClient.users.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    let user = userFound;
+
+    if (!userFound?.balance) {
+      const dbRes = await prismaClient.users.create({
+        data: {
+          email: email,
+          balance: 50000000,
+          decimal: 4,
+        },
+      });
+
+      user = dbRes;
+    }
+    const jwtToken = jwt.sign(user!.id, process.env.JWT_SECRET!);
 
     await httpPusher.xAdd("stream:app:info", "*", {
       type: "user-signup",
-      email: email,
-      resId,
+      user: JSON.stringify(user),
+      reqId,
     });
 
-    await responseLoopObj.waitForResponse(resId);
+    await responseLoopObj.waitForResponse(reqId);
 
-    console.log("recieved");
+    const { data, error } = await sendEmail(user!.email, jwtToken);
 
-    // const { data, error } = await sendEmail(email, jwtToken);
-
-    // if (error) {
-    //   res.status(400).json({ error });
-    //   return;
-    // }
+    if (error) {
+      console.log("send email fails");
+      res.status(400).json({ error });
+      return;
+    }
 
     res.json({
       message: "Email sent",
     });
+    return;
   } catch (err) {
     res.status(400).json({
-      message: "Could not sign in",
+      message: "Could not sign up, request timed out",
     });
+    return;
   }
 };
 
@@ -64,7 +85,38 @@ export const signinController = async (req: Request, res: Response) => {
     return;
   }
 
-  res.cookie("jwt", token);
+  const verifiedToken = jwt.verify(token, process.env.JWT_SECRET!) as string;
 
-  res.status(301).redirect("http://localhost:3000/trade/");
+  try {
+    const reqId = Date.now().toString() + crypto.randomUUID();
+
+    const userFound = await prismaClient.users.findFirst({
+      where: {
+        id: verifiedToken,
+      },
+    });
+
+    if (!userFound?.email) {
+      res.status(401).json({
+        message: "User not found",
+      });
+      return;
+    }
+    await httpPusher.xAdd("stream:app:info", "*", {
+      type: "user-signin",
+      user: JSON.stringify(userFound),
+      reqId,
+    });
+
+    await responseLoopObj.waitForResponse(reqId);
+
+    res.cookie("jwt", token);
+    res.status(301).redirect("http://localhost:3000/trade/");
+    return;
+  } catch (err) {
+    res.status(400).json({
+      message: "Could not sign in, request timed out",
+    });
+    return;
+  }
 };

@@ -1,6 +1,6 @@
 import { tradePusher } from "@repo/redis/queue";
 import { Request, Response } from "express";
-import { ResponseLoop, responseLoopObj } from "../utils/responseLoop";
+import { responseLoopObj } from "../utils/responseLoop";
 import { closeOrderSchema, createOrderSchema } from "@repo/types/zodSchema";
 
 (async () => {
@@ -17,23 +17,23 @@ export const openTradeController = async (req: Request, res: Response) => {
     return;
   }
 
-  const email = (req as unknown as { email: string }).email;
-
-  const id = Date.now().toString() + crypto.randomUUID(); // same of order id and response catching
-
-  const info = { id, ...validInput.data };
+  const userId = (req as unknown as { userId: string }).userId;
+  const reqId = Date.now().toString() + crypto.randomUUID();
+  const tradeInfo = JSON.stringify(validInput.data);
 
   try {
     await tradePusher.xAdd("stream:app:info", "*", {
       type: "trade-open",
-      trade: JSON.stringify(info),
+      tradeInfo,
+      userId,
+      reqId,
     });
 
-    await responseLoopObj.waitForResponse(id);
-    res.json({ message: "trade executed", id: id });
+    const orderId = await responseLoopObj.waitForResponse(reqId);
+    res.json({ message: "trade executed", orderId });
   } catch (err) {
     console.log(err);
-    res.status(411).json({ message: "Trade not executed" });
+    res.status(411).json({ message: "Trade not executed", err });
   }
 };
 
@@ -47,18 +47,22 @@ export const closeTradeController = async (req: Request, res: Response) => {
     return;
   }
 
-  const resId = Date.now().toString() + crypto.randomUUID();
-
+  const userId = (req as unknown as { userId: string }).userId;
+  const reqId = Date.now().toString() + crypto.randomUUID();
   const orderId = validInput.data.orderId;
+
+  console.log("sending to engine");
 
   try {
     await tradePusher.xAdd("stream:app:info", "*", {
       type: "trade-close",
-      resId,
+      reqId,
+      userId,
       orderId,
     });
 
-    await responseLoopObj.waitForResponse(resId);
+    await responseLoopObj.waitForResponse(reqId);
+    console.log("recieved");
     res.json({ message: "Trade Closed" });
   } catch (err) {
     console.log(err);

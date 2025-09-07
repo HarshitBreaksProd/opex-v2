@@ -12,7 +12,8 @@
     "@repo/types": "workspace:*"
   },
   "dependencies": {
-    "@repo/redis": "workspace:*"
+    "@repo/redis": "workspace:*",
+    "@repo/db": "workspace:*"
   },
   "keywords": [],
   "author": "",

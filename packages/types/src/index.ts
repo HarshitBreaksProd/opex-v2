@@ -17,11 +17,21 @@ export type FilteredDataType = {
 };
 
 export type UserBalance = {
-  usdInt: number;
+  balance: number;
   decimal: number;
 };
 
+export enum OrderType {
+  long = "long",
+  short = "short",
+}
+
 export type OpenOrders = {
-  openPriceInt: number;
-  openPriceDecPos: number;
+  id: string;
+  openPrice: number;
+  leverage: number;
+  asset: string;
+  margin: number;
+  quantity: number;
+  type: OrderType;
 };

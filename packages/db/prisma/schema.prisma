@@ -14,44 +14,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum tradeType {
-  long
+model Users {
+  id             String           @id @default(uuid())
+  email          String           @unique
+  balance        Int
+  decimal        Int              @default(4)
+  lastLoggedInt  DateTime?
+  ExistingTrades ExistingTrades[]
+}
+
+enum OrderType {
   short
+  long
 }
 
-model users {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  balance   Int      @default(50000000)
-  balDecPos Int      @default(4)
-  trades    trades[]
-}
-
-enum orderStatus {
-  open
-  close
-}
-
-model trades {
-  id               String      @id @default(uuid())
-  margin           Int
-  marginDecPos     Int         @default(4)
-  asset            String
-  type             tradeType
-  leverage         Int
-  openPrice        Int
-  openPriceDecPos  Int         @default(4)
-  orderStatus      orderStatus @default(open)
-  closePrice       Int?
-  closePriceDecPos Int?
-  pnl              Int?
-  pnlDecPos        Int?
-  createdAt        DateTime    @default(now())
-  stopLoss         Int?
-  stopLossDecPos   Int?        @default(4)
-  takeProfit       Int?
-  takeProfitDecPos Int?        @default(4)
-  userId           String
-  user             users       @relation(fields: [userId], references: [id])
+model ExistingTrades {
+  id         String    @id @default(uuid())
+  openPrice  Int
+  leverage   Int
+  asset      String
+  margin     Int
+  type       OrderType
+  closePrice Int
+  pnl        Int
+  decimal    Int
+  liquidated Boolean
+  userId     String
+  user       Users     @relation(fields: [userId], references: [id])
+  createdAt  DateTime  @default(now())
 }

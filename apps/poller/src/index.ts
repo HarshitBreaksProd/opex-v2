@@ -70,9 +70,9 @@ ws.onmessage = async (msg) => {
 
     publisher.publish("ws:price:update", JSON.stringify(dataToBeSent));
 
-    priceUpdatePusher.xAdd("stream:trade:info", "*", {
+    priceUpdatePusher.xAdd("stream:app:info", "*", {
       type: "price-update",
-      trade: JSON.stringify(dataToBeSent),
+      tradePrices: JSON.stringify(dataToBeSent),
     });
 
     console.log(dataToBeSent);

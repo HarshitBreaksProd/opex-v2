@@ -1,7 +1,10 @@
 import { engineResponsePuller } from "@repo/redis/queue";
 
 export class ResponseLoop {
-  private idResponseMap: Record<string, () => void> = {};
+  private idResponseMap: Record<
+    string,
+    { resolve: (msg?: string) => void; reject: (msg?: string) => void }
+  > = {};
 
   constructor() {
     engineResponsePuller.connect();
@@ -10,7 +13,7 @@ export class ResponseLoop {
 
   async runLoop() {
     while (1) {
-      const ackRes = await engineResponsePuller.xRead(
+      const res = await engineResponsePuller.xRead(
         {
           key: "stream:engine:response",
           id: "$",
@@ -18,13 +21,26 @@ export class ResponseLoop {
         { BLOCK: 0, COUNT: 1 }
       );
 
-      if (ackRes) {
-        if (
-          ackRes[0]?.messages[0]?.message.type === "trade-acknowledgement" &&
-          ackRes[0].messages[0].message.message
-        ) {
-          const gotId = JSON.parse(ackRes[0].messages[0].message.message).resId;
-          this.idResponseMap[gotId]!();
+      if (res) {
+        const reqType = res[0]?.messages[0]?.message.type;
+        const gotId = res[0]!.messages[0]!.message.reqId!;
+        console.log("Got a res");
+        console.log(res[0]?.messages[0]);
+
+        if (reqType === "user-signup/in-ack") {
+          this.idResponseMap[gotId]!.resolve();
+          delete this.idResponseMap[gotId];
+        } else if (reqType === "trade-open-err") {
+          const message = JSON.parse(
+            res[0]!.messages[0]!.message.response!
+          ).message;
+          this.idResponseMap[gotId]!.reject(message);
+          delete this.idResponseMap[gotId];
+        } else if (reqType === "trade-open-ack") {
+          const orderId = JSON.parse(
+            res[0]?.messages[0]?.message.response!
+          ).orderId;
+          this.idResponseMap[gotId]!.resolve(orderId);
           delete this.idResponseMap[gotId];
         }
       }
@@ -32,17 +48,14 @@ export class ResponseLoop {
   }
 
   async waitForResponse(id: string) {
-    return new Promise<void>((resolve, reject) => {
-      console.log(id);
-      console.log("setTime1");
+    return new Promise<void | string>((resolve, reject) => {
       setTimeout(() => {
         if (this.idResponseMap[id]) {
           delete this.idResponseMap[id];
           reject("Response not got within time");
         }
       }, 3500);
-      console.log("setTime2");
-      this.idResponseMap[id] = resolve;
+      this.idResponseMap[id] = { resolve, reject };
     });
   }
 }
