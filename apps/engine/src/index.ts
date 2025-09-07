@@ -77,6 +77,65 @@ const userBalances: Record<string, UserBalance> = {};
           currentPrice[key] = value as unknown as FilteredDataType;
         }
 
+        for (const [userId, orders] of Object.entries(openOrders)) {
+          orders.forEach(async (order) => {
+            let assetPrice: number;
+            let priceChange: number;
+            let pnl: number;
+
+            if (order.type === "long") {
+              assetPrice = currentPrice[order.asset]?.bid_price!;
+              priceChange = assetPrice - order.openPrice;
+            } else {
+              assetPrice = currentPrice[order.asset]?.ask_price!;
+              priceChange = order.openPrice - assetPrice;
+            }
+
+            pnl = (priceChange * order.leverage * order.quantity) / 10 ** 4;
+
+            const pnlStr = pnl.toFixed(4);
+            const pnlIntStr = pnlStr.split(".")[0] + pnlStr.split(".")[1]!;
+            const pnlInt = Number(pnlIntStr);
+
+            const lossTakingCapacity = order.margin / order.leverage;
+
+            const lossTakingCapacityStr = lossTakingCapacity.toFixed(4);
+            const lossTakingCapacityIntStr =
+              lossTakingCapacityStr.split(".")[0] +
+              lossTakingCapacityStr.split(".")[1]!;
+            const lossTakingCapacityInt = Number(lossTakingCapacityIntStr);
+
+            if (pnlInt < -0.9 * lossTakingCapacityInt) {
+              //close Trade
+              const newBalChange = pnlInt + order.margin;
+
+              userBalances[userId] = {
+                balance: userBalances[userId]!.balance + newBalChange,
+                decimal: 4,
+              };
+
+              openOrders[userId] = openOrders[userId]!.filter(
+                (o) => o.id !== order.id
+              );
+
+              const closedOrder = {
+                ...order,
+                closePrice: assetPrice,
+                pnl: pnlInt,
+                decimal: 4,
+                liquidated: false,
+                userId,
+              };
+
+              await prismaClient.existingTrades.create({
+                data: {
+                  ...closedOrder,
+                },
+              });
+            }
+          });
+        }
+
         // console.log(currentPrice);
         // Trade Open
       } else if (reqType === "trade-open") {

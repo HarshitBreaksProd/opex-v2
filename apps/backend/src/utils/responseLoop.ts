@@ -24,46 +24,52 @@ export class ResponseLoop {
       if (res) {
         const reqType = res[0]?.messages[0]?.message.type;
         const gotId = res[0]!.messages[0]!.message.reqId!;
+        let orderId;
         console.log("Got a res");
         console.log(res[0]?.messages[0]);
 
-        if (reqType === "user-signup/in-ack") {
-          this.idResponseMap[gotId]!.resolve();
-          delete this.idResponseMap[gotId];
-        } else if (
-          reqType === "trade-open-err" ||
-          reqType === "trade-close-err" ||
-          reqType === "get-user-bal-err"
-        ) {
-          const message = JSON.parse(
-            res[0]!.messages[0]!.message.response!
-          ).message;
-          this.idResponseMap[gotId]!.reject(message);
-          delete this.idResponseMap[gotId];
-        } else if (reqType === "trade-open-ack") {
-          const orderId = JSON.parse(
-            res[0]?.messages[0]?.message.response!
-          ).orderId;
-          this.idResponseMap[gotId]!.resolve(orderId);
-          delete this.idResponseMap[gotId];
-        } else if (reqType === "trade-close-ack") {
-          const orderId = JSON.parse(
-            res[0]?.messages[0]?.message.response!
-          ).orderId;
-          this.idResponseMap[gotId]!.resolve(orderId);
-          delete this.idResponseMap[gotId];
-        } else if (reqType === "get-asset-bal-ack") {
-          const assetBal = JSON.parse(
-            res[0]?.messages[0]?.message.response!
-          ).assetBal;
-          this.idResponseMap[gotId]!.resolve(assetBal);
-          delete this.idResponseMap[gotId];
-        } else if (reqType === "get-user-bal-ack") {
-          const userBal = JSON.parse(
-            res[0]?.messages[0]?.message.response!
-          ).userBal;
-          this.idResponseMap[gotId]!.resolve(userBal);
-          delete this.idResponseMap[gotId];
+        switch (reqType) {
+          case "user-signup/in-ack":
+            this.idResponseMap[gotId]!.resolve();
+            delete this.idResponseMap[gotId];
+            break;
+          case "trade-open-err":
+          case "trade-close-err":
+          case "get-user-bal-err":
+            const message = JSON.parse(
+              res[0]!.messages[0]!.message.response!
+            ).message;
+            this.idResponseMap[gotId]!.reject(message);
+            delete this.idResponseMap[gotId];
+            break;
+          case "trade-open-ack":
+            orderId = JSON.parse(
+              res[0]?.messages[0]?.message.response!
+            ).orderId;
+            this.idResponseMap[gotId]!.resolve(orderId);
+            delete this.idResponseMap[gotId];
+            break;
+          case "trade-close-ack":
+            orderId = JSON.parse(
+              res[0]?.messages[0]?.message.response!
+            ).orderId;
+            this.idResponseMap[gotId]!.resolve(orderId);
+            delete this.idResponseMap[gotId];
+            break;
+          case "get-asset-bal-ack":
+            const assetBal = JSON.parse(
+              res[0]?.messages[0]?.message.response!
+            ).assetBal;
+            this.idResponseMap[gotId]!.resolve(assetBal);
+            delete this.idResponseMap[gotId];
+            break;
+          case "get-user-bal-ack":
+            const userBal = JSON.parse(
+              res[0]?.messages[0]?.message.response!
+            ).userBal;
+            this.idResponseMap[gotId]!.resolve(userBal);
+            delete this.idResponseMap[gotId];
+            break;
         }
       }
     }
