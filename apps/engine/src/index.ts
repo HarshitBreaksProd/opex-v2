@@ -7,8 +7,9 @@ import {
   OrderType,
   UserBalance,
 } from "@repo/types/types";
+import { mongodbClient } from "./dbClient";
 
-const currentPrice: Record<string, FilteredDataType> = {
+let currentPrice: Record<string, FilteredDataType> = {
   BTC_USDC_PERP: {
     ask_price: 0,
     bid_price: 0,
@@ -26,9 +27,38 @@ const currentPrice: Record<string, FilteredDataType> = {
   },
 };
 
-const openOrders: Record<string, OpenOrders[]> = {};
+let openOrders: Record<string, OpenOrders[]> = {};
 
-const userBalances: Record<string, UserBalance> = {};
+let userBalances: Record<string, UserBalance> = {};
+
+let lastConsumedStreamItemId: string = "0-0";
+let lastSnapShotAt: number = Date.now();
+
+const dbName = "opex-snapshot";
+const collectionName = "engine_backup";
+
+//startup logic
+(async () => {
+  await mongodbClient.connect();
+  console.log("Connected to db");
+
+  const db = mongodbClient.db(dbName);
+  const collection = db.collection(collectionName);
+
+  const result = await collection.findOne({ id: "dump" });
+
+  console.log(result);
+
+  if (result) {
+    currentPrice = result.data.currentPrice!;
+    openOrders = result.data.openOrders!;
+    userBalances = result.data.userBalances!;
+    lastConsumedStreamItemId: result.data.lastConsumedStreamItemId;
+    lastSnapShotAt: result.data.lastSnapShotAt;
+
+    
+  }
+})();
 
 (async () => {
   await enginePuller.connect();
@@ -46,6 +76,8 @@ const userBalances: Record<string, UserBalance> = {};
     if (res) {
       let reqId = res[0]?.messages[0]?.message.reqId!;
       const reqType = res[0]?.messages[0]?.message.type;
+
+      lastConsumedStreamItemId = res[0]?.messages[0]?.id!;
 
       // User Signup and Signin
       if (reqType === "user-signup" || reqType === "user-signin") {
@@ -385,6 +417,42 @@ const userBalances: Record<string, UserBalance> = {};
 
         console.log(currentPrice);
       }
+    }
+    if (Date.now() - lastSnapShotAt > 5000) {
+      const db = mongodbClient.db(dbName);
+      const collection = db.collection(collectionName);
+
+      const result = await collection.findOneAndReplace(
+        { id: "dump" },
+        {
+          id: "dump",
+          data: {
+            currentPrice,
+            openOrders,
+            userBalances,
+            lastConsumedStreamItemId,
+            lastSnapShotAt,
+          },
+        }
+      );
+
+      if (!result) {
+        const result = await collection.insertOne({
+          id: "dump",
+          data: {
+            currentPrice,
+            openOrders,
+            userBalances,
+            lastConsumedStreamItemId,
+            lastSnapShotAt,
+          },
+        });
+        console.log("inserted");
+      } else {
+        console.log("replaced");
+      }
+
+      lastSnapShotAt = Date.now();
     }
   }
 })();
