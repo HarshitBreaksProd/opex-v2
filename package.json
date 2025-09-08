@@ -12,7 +12,7 @@
     "start:backend": "cd ./apps/backend && pnpm run start",
     "start:engine": "cd ./apps/engine && pnpm run start",
     "start:poller": "cd ./apps/poller && pnpm run start",
-    "start:ws": "cd ./apps/web-socket && pnpm run start"
+    "start:web-socket": "cd ./apps/web-socket && pnpm run start"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

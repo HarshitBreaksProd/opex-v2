@@ -68,7 +68,7 @@ const collectionName = "engine_backup";
       const streamMetaData = await enginePuller.xInfoGroups("stream:app:info");
       const lastDeliveredId = streamMetaData[0]?.["last-delivered-id"];
 
-      console.log(lastConsumedStreamItemId, lastDeliveredId);
+      // console.log(lastConsumedStreamItemId, lastDeliveredId);
 
       const res = await enginePuller.xRange(
         "stream:app:info",
@@ -104,7 +104,7 @@ const collectionName = "engine_backup";
       const reqType = res[0]?.messages[0]?.message.type;
 
       lastConsumedStreamItemId = res[0]?.messages[0]?.id!;
-      console.log("res", lastConsumedStreamItemId);
+      // console.log("res", lastConsumedStreamItemId);
 
       // User Signup and Signin
       if (reqType === "user-signup" || reqType === "user-signin") {
@@ -315,7 +315,7 @@ const collectionName = "engine_backup";
 
         openOrders[userId]?.forEach((o) => {
           if (o.id === orderId) {
-            console.log(o);
+            // console.log(o);
             order = o;
           }
         });
@@ -437,12 +437,6 @@ const collectionName = "engine_backup";
           reqId,
           response: JSON.stringify({ userBal }),
         });
-
-        console.log(openOrders);
-
-        console.log(userBalances);
-
-        console.log(currentPrice);
       }
     }
 

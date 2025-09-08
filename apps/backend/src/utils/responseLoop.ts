@@ -26,7 +26,7 @@ export class ResponseLoop {
         const gotId = res[0]!.messages[0]!.message.reqId!;
         let orderId;
         console.log("Got a res");
-        console.log(res[0]?.messages[0]);
+        // console.log(res[0]?.messages[0]);
 
         switch (reqType) {
           case "user-signup/in-ack":

@@ -54,20 +54,18 @@ ws.onmessage = async (msg) => {
     decimal: 4,
   };
 
-  // await publisher.publish("trade-info", JSON.stringify(filteredData));
-
   assetPrices[data.s] = filteredData;
 
   if (Date.now() - lastInsertTime > 100) {
     let dataToBeSent: Record<string, FilteredDataType> = {};
-
+    
     for (const [key, value] of Object.entries(assetPrices)) {
       if (value.ask_price === 0) {
         continue;
       }
       dataToBeSent[key] = value;
     }
-
+    
     publisher.publish("ws:price:update", JSON.stringify(dataToBeSent));
 
     priceUpdatePusher.xAdd("stream:app:info", "*", {
@@ -75,8 +73,6 @@ ws.onmessage = async (msg) => {
       type: "price-update",
       tradePrices: JSON.stringify(dataToBeSent),
     });
-
-    // console.log(dataToBeSent);
 
     lastInsertTime = Date.now();
   }
