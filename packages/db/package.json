@@ -11,7 +11,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "postbuild": "mkdir -p dist/generated && cp -R src/generated/* dist/generated/"
+    "postbuild": "mkdir -p dist/generated && cp -R src/generated/* dist/generated/",
+    "db:generate": "prisma generate"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*"
