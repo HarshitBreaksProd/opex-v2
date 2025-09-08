@@ -2,14 +2,17 @@
   "name": "@repo/redis",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    "./queue": "./src/queue.ts",
-    "./pubsub": "./src/pubsub.ts",
-    "./index": "./src/index.ts"
+    "./queue": "./dist/queue.js",
+    "./pubsub": "./dist/pubsub.js",
+    "./index": "./dist/index.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",

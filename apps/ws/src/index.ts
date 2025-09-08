@@ -1,7 +1,8 @@
 import { WebSocketServer } from "ws";
 import { subscriber } from "@repo/redis/pubsub";
+import "dotenv/config";
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ port: Number(process.env.WS_PORT!) });
 
 (async () => {
   await subscriber.connect();

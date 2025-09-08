@@ -2,6 +2,7 @@ import { tradePusher } from "@repo/redis/queue";
 import { Request, Response } from "express";
 import { responseLoopObj } from "../utils/responseLoop";
 import { closeOrderSchema, createOrderSchema } from "@repo/types/zodSchema";
+import prismaClient from "@repo/db/client";
 
 (async () => {
   await tradePusher.connect();
@@ -66,5 +67,24 @@ export const closeTradeController = async (req: Request, res: Response) => {
   } catch (err) {
     console.log(err);
     res.status(411).json({ message: "Trade Not executed" });
+  }
+};
+
+export const fetchClosedTrades = async (req: Request, res: Response) => {
+  const userId = (req as unknown as { userId: string }).userId;
+  try {
+    const trades = await prismaClient.existingTrades.findMany({
+      where: { userId },
+    });
+
+    res.json({
+      trades,
+    });
+  } catch (err) {
+    console.log(err);
+
+    res.status(411).json({
+      message: "Faced some error",
+    });
   }
 };
