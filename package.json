@@ -9,6 +9,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "db:generate": "cd ./packages/db && pnpm run db:generate && cd ../..",
+    "db:migrate": "cd ./packages/db && pnpm run db:migrate && cd ../..",
     "start:backend": "cd ./apps/backend && pnpm run start",
     "start:engine": "cd ./apps/engine && pnpm run start",
     "start:poller": "cd ./apps/poller && pnpm run start",
