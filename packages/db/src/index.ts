@@ -12,3 +12,4 @@ if ((globalThis as unknown as { prismaClient: PrismaClient }).prismaClient) {
 }
 
 export default prismaClient;
+export type TypeOfPrismaClient = PrismaClient;

@@ -75,6 +75,9 @@ importers:
       mongodb:
         specifier: ^6.19.0
         version: 6.19.0
+      zod:
+        specifier: ^4.1.5
+        version: 4.1.5
     devDependencies:
       '@repo/types':
         specifier: workspace:*

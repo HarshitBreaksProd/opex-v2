@@ -71,11 +71,12 @@ ws.onmessage = async (msg) => {
     publisher.publish("ws:price:update", JSON.stringify(dataToBeSent));
 
     priceUpdatePusher.xAdd("stream:app:info", "*", {
+      reqId: "no-return",
       type: "price-update",
       tradePrices: JSON.stringify(dataToBeSent),
     });
 
-    console.log(dataToBeSent);
+    // console.log(dataToBeSent);
 
     lastInsertTime = Date.now();
   }

@@ -43,3 +43,9 @@ export type AssetBalance = Record<
     decimal: number;
   }
 >;
+
+export type EngineResponseType = {
+  type: string;
+  reqId: string;
+  payload: unknown;
+};
