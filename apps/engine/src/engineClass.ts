@@ -89,6 +89,11 @@ export class Engine {
           );
         }
 
+        await this.enginePuller.xGroupSetId(
+          this.streamKey,
+          this.groupName,
+          "$"
+        );
         const res = await this.enginePuller.xReadGroup(
           this.groupName,
           this.consumerName,
@@ -110,6 +115,7 @@ export class Engine {
 
         if (Date.now() - this.lastSnapShotAt > 5000) {
           await this.persistSnapshot();
+          await this.enginePuller.xTrim(this.streamKey, "MAXLEN", 10000);
         }
       } catch (loopErr) {
         console.error(loopErr);
