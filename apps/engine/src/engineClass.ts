@@ -537,6 +537,16 @@ export class Engine {
       },
     });
 
+    await this.prisma.users.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        balance: this.userBalances[userId].balance,
+        decimal: this.userBalances[userId].decimal,
+      },
+    });
+
     return {
       type: "trade-close-ack",
       reqId: msg.reqId,
