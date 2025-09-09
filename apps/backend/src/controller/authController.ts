@@ -5,6 +5,7 @@ import { sendEmail } from "../utils/sendEmail";
 import { httpPusher } from "@repo/redis/queue";
 import { responseLoopObj } from "../utils/responseLoop";
 import prismaClient from "@repo/db/client";
+import "dotenv/config";
 
 (async () => {
   await httpPusher.connect();
@@ -112,7 +113,8 @@ export const signinController = async (req: Request, res: Response) => {
     await responseLoopObj.waitForResponse(reqId);
 
     res.cookie("jwt", token);
-    res.status(301).redirect(`${process.env.CORS_ORIGIN}/trade`);
+    console.log(process.env.CORS_ORIGIN);
+    res.redirect(new URL("/trade", process.env.CORS_ORIGIN).toString());
     return;
   } catch (err) {
     res.status(400).json({
