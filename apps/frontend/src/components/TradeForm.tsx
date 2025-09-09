@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useQuotesStore } from "@/lib/quotesStore";
 import { appToBackendSymbol } from "@/lib/symbols";
 import { useOpenOrdersStore } from "@/lib/openOrdersStore";
 import { toDecimalNumber } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function TradeForm() {
   const { selectedSymbol, quotes } = useQuotesStore();
@@ -18,6 +19,7 @@ export default function TradeForm() {
   const decimal = q ? q.decimal : 4;
 
   const upsert = useOpenOrdersStore((s) => s.upsert);
+  const qc = useQueryClient();
   const { mutate, isPending, isSuccess, error } = useMutation({
     mutationFn: async () => {
       const slippageBips = Math.round(Number(slippage) * 100);
@@ -37,6 +39,9 @@ export default function TradeForm() {
       if (data?.order) {
         upsert(data.order);
       }
+      // Refetch balance and open orders immediately after open
+      qc.invalidateQueries({ queryKey: ["balance.usd"] });
+      qc.invalidateQueries({ queryKey: ["openOrders"] });
     },
   });
 
@@ -46,49 +51,43 @@ export default function TradeForm() {
         e.preventDefault();
         mutate();
       }}
-      style={{ display: "grid", gap: 10 }}
+      className="grid gap-2.5"
     >
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={() => setType("long")}
-          style={{
-            flex: 1,
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: type === "long" ? "2px solid #16a34a" : "1px solid #eee",
-            background: type === "long" ? "#e6f7ec" : "#fff",
-            fontWeight: 600,
-          }}
+          className={`flex-1 rounded-md px-3 py-2 font-semibold transition-colors focus-visible:outline-none ${
+            type === "long"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "bg-secondary text-secondary-foreground"
+          }`}
         >
           Long
         </button>
         <button
           type="button"
           onClick={() => setType("short")}
-          style={{
-            flex: 1,
-            padding: "10px 12px",
-            borderRadius: 8,
-            border: type === "short" ? "2px solid #dc2626" : "1px solid #eee",
-            background: type === "short" ? "#fdecec" : "#fff",
-            fontWeight: 600,
-          }}
+          className={`flex-1 rounded-md text-black px-3 py-2 font-semibold transition-colors focus-visible:outline-none ${
+            type === "short"
+              ? "bg-red-600 text-white shadow-xs"
+              : "bg-secondary text-secondary-foreground"
+          }`}
         >
           Short
         </button>
       </div>
 
-      <label style={{ display: "grid", gap: 6, fontSize: 12 }}>
+      <label className="grid gap-1.5 text-xs">
         Asset
         <input
           value={selectedSymbol}
           disabled
-          style={{ padding: 8, border: "1px solid #eee", borderRadius: 6 }}
+          className="rounded-md border bg-background px-2.5 py-2"
         />
       </label>
 
-      <label style={{ display: "grid", gap: 6, fontSize: 12 }}>
+      <label className="grid gap-1.5 text-xs">
         Quantity
         <input
           type="number"
@@ -96,11 +95,11 @@ export default function TradeForm() {
           value={quantity}
           onChange={(e) => setQuantity(Number(e.target.value))}
           required
-          style={{ padding: 8, border: "1px solid #eee", borderRadius: 6 }}
+          className="rounded-md border bg-background px-2.5 py-2"
         />
       </label>
 
-      <label style={{ display: "grid", gap: 6, fontSize: 12 }}>
+      <label className="grid gap-1.5 text-xs">
         Leverage
         <input
           type="number"
@@ -109,11 +108,11 @@ export default function TradeForm() {
           value={leverage}
           onChange={(e) => setLeverage(Number(e.target.value))}
           required
-          style={{ padding: 8, border: "1px solid #eee", borderRadius: 6 }}
+          className="rounded-md border bg-background px-2.5 py-2"
         />
       </label>
 
-      <label style={{ display: "grid", gap: 6, fontSize: 12 }}>
+      <label className="grid gap-1.5 text-xs">
         Slippage (%)
         <input
           type="number"
@@ -121,36 +120,25 @@ export default function TradeForm() {
           value={slippage}
           onChange={(e) => setSlippage(Number(e.target.value))}
           required
-          style={{ padding: 8, border: "1px solid #eee", borderRadius: 6 }}
+          className="rounded-md border bg-background px-2.5 py-2"
         />
       </label>
 
-      <div style={{ display: "grid", gap: 4, fontSize: 12 }}>
+      <div className="grid gap-1 text-xs">
         <div>
           Open Price: {openPrice ? toDecimalNumber(openPrice, decimal) : "-"}
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 8,
-          border: "1px solid #eee",
-          background: "#111",
-          color: "#fff",
-          fontWeight: 600,
-        }}
-      >
+      <Button type="submit" disabled={isPending} className="h-10 font-semibold">
         {isPending ? "Placing…" : "Place Order"}
-      </button>
+      </Button>
 
       {isSuccess ? (
-        <div style={{ color: "#16a34a", fontSize: 12 }}>Order placed.</div>
+        <div className="text-xs text-emerald-600">Order placed.</div>
       ) : null}
       {error ? (
-        <div style={{ color: "#dc2626", fontSize: 12 }}>
+        <div className="text-xs text-red-600">
           {(error as Error).message || "Failed"}
         </div>
       ) : null}

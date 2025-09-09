@@ -6,7 +6,7 @@ export default function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div style={{ textAlign: "center", marginTop: 48 }}>
+      <div className="mt-12 text-center text-muted-foreground">
         Checking session…
       </div>
     );

@@ -8,7 +8,7 @@ import {
   type ISeriesApi,
   type UTCTimestamp,
 } from "lightweight-charts";
-import { useKlines } from "@/lib/klines";
+import { useKlines, fetchKlinesBefore } from "@/lib/klines";
 import { useQuotesStore } from "@/lib/quotesStore";
 
 type Props = {
@@ -31,21 +31,36 @@ export default function CandlesChart({ symbol }: Props) {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
+  function getIsDark() {
+    if (typeof document === "undefined") return false;
+    return document.documentElement.classList.contains("dark");
+  }
+
+  function getLayout() {
+    const isDark = getIsDark();
+    return {
+      textColor: isDark ? "#e5e7eb" : "#111827",
+      background: { color: isDark ? "#0f172a" : "#ffffff" },
+    } as const;
+  }
+
   // fetch historical klines (seed data)
   const seedInterval = timeframe;
   const { data: klines } = useKlines(symbol, seedInterval, 100);
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const initialHeight = containerRef.current.clientHeight || 320;
     const chart = createChart(containerRef.current, {
-      layout: {
-        textColor: "black",
-        background: { color: "white" },
-      },
+      layout: getLayout(),
       rightPriceScale: { borderVisible: false },
-      timeScale: { borderVisible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+      },
       grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-      height: 320,
+      height: initialHeight,
     });
     const series = chart.addSeries(CandlestickSeries, {
       upColor: "#16a34a",
@@ -61,11 +76,20 @@ export default function CandlesChart({ symbol }: Props) {
 
     const ro = new ResizeObserver(() => {
       if (!containerRef.current) return;
-      chart.applyOptions({ width: containerRef.current.clientWidth });
+      chart.applyOptions({
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
+      });
     });
     ro.observe(containerRef.current);
 
+    const onThemeChange = () => {
+      chart.applyOptions({ layout: getLayout() });
+    };
+    window.addEventListener("themechange", onThemeChange);
+
     return () => {
+      window.removeEventListener("themechange", onThemeChange);
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
@@ -87,6 +111,55 @@ export default function CandlesChart({ symbol }: Props) {
       }))
     );
   }, [klines]);
+
+  // Backfill older klines when scrolling left
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current) return;
+    const chart = chartRef.current;
+    let loading = false;
+
+    const handler = async () => {
+      if (loading) return;
+      const range = chart.timeScale().getVisibleRange();
+      const logical = chart.timeScale().getVisibleLogicalRange();
+      if (!range || !logical) return;
+      // When scrolled near the left edge, load more
+      if (logical.from < 5) {
+        loading = true;
+        const first = seriesRef.current!.dataByIndex(0, 0);
+        const firstTime = (first?.time as number | undefined) ?? range.from;
+        const endTimeSec = Math.max(0, Math.floor(firstTime) - 1);
+        try {
+          const older = await fetchKlinesBefore(
+            symbol,
+            seedInterval,
+            endTimeSec,
+            100
+          );
+          if (older && older.length) {
+            // prepend in chronological order
+            const mapped = older.map((k) => ({
+              time: k.time as UTCTimestamp,
+              open: k.open,
+              high: k.high,
+              low: k.low,
+              close: k.close,
+            }));
+            // get existing data
+            const current = (seriesRef.current as any).data() as any[];
+            seriesRef.current!.setData([...mapped, ...current]);
+          }
+        } finally {
+          loading = false;
+        }
+      }
+    };
+
+    chart.timeScale().subscribeVisibleTimeRangeChange(handler);
+    return () => {
+      chart.timeScale().unsubscribeVisibleTimeRangeChange(handler);
+    };
+  }, [symbol, seedInterval]);
 
   // stream latest in-memory candle as updates
   useEffect(() => {
@@ -147,29 +220,24 @@ export default function CandlesChart({ symbol }: Props) {
     }
   }, [live, timeframe, candles, symbol]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: 320 }} />;
+  return <div ref={containerRef} className="w-full h-full" />;
 }
 
 export function TimeframeSwitcher() {
   const timeframe = useCandlesStore((s) => s.timeframe);
   const setTimeframe = useCandlesStore((s) => s.setTimeframe);
-  const tfs: Timeframe[] = ["1m", "5m"];
+  const tfs: Timeframe[] = ["1m", "5m", "15m", "1h", "1d"];
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <select
+      value={timeframe}
+      onChange={(e) => setTimeframe(e.target.value as Timeframe)}
+      className="rounded-md border bg-background px-2.5 py-1.5 text-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+    >
       {tfs.map((tf) => (
-        <button
-          key={tf}
-          onClick={() => setTimeframe(tf)}
-          style={{
-            padding: "6px 10px",
-            borderRadius: 6,
-            border: timeframe === tf ? "1px solid #646cff" : "1px solid #eee",
-            background: timeframe === tf ? "#f5f6ff" : "#fff",
-          }}
-        >
+        <option key={tf} value={tf}>
           {tf}
-        </button>
+        </option>
       ))}
-    </div>
+    </select>
   );
 }

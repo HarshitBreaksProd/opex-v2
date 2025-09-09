@@ -6,6 +6,7 @@ import {
 } from "@/lib/openOrdersStore";
 import { useQuotesStore } from "@/lib/quotesStore";
 import { toDecimalNumber } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function appToDisplaySymbol(backendSymbol: string): string {
   // BTC_USDC_PERP -> BTCUSDC
@@ -29,173 +30,81 @@ export default function OpenOrders() {
           ? q.bid_price
           : q.ask_price
         : o.openPrice;
-      const diff =
+      const diffInt =
         o.type === "long" ? current - o.openPrice : o.openPrice - current;
-      const pnlInt = Math.round(diff * o.quantity);
-      return { ...o, appSym, decimal, current, pnlInt };
+      const pnlDec = toDecimalNumber(diffInt, decimal) * o.quantity;
+      return { ...o, appSym, decimal, current, pnlDec };
     });
   }, [orders, quotes]);
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
+            <th className="border-b px-2 py-2 text-left text-sm font-medium">
               Asset
             </th>
-            <th
-              style={{
-                textAlign: "center",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
+            <th className="border-b px-2 py-2 text-center text-sm font-medium">
               Type
             </th>
-            <th
-              style={{
-                textAlign: "right",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
+            <th className="border-b px-2 py-2 text-right text-sm font-medium">
               Open
             </th>
-            <th
-              style={{
-                textAlign: "right",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
+            <th className="border-b px-2 py-2 text-right text-sm font-medium">
               Current
             </th>
-            <th
-              style={{
-                textAlign: "right",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
+            <th className="border-b px-2 py-2 text-right text-sm font-medium">
               Qty
             </th>
-            <th
-              style={{
-                textAlign: "right",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
+            <th className="border-b px-2 py-2 text-right text-sm font-medium">
               Levg
             </th>
-            <th
-              style={{
-                textAlign: "right",
-                padding: 8,
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              PnL (int)
+            <th className="border-b px-2 py-2 text-right text-sm font-medium">
+              PnL
             </th>
-            <th style={{ padding: 8, borderBottom: "1px solid #eee" }} />
+            <th className="border-b px-2 py-2" />
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
-              <td style={{ padding: 8, borderBottom: "1px solid #f5f5f5" }}>
-                {r.appSym}
-              </td>
-              <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textTransform: "capitalize",
-                  textAlign: "center",
-                }}
-              >
+              <td className="border-b px-2 py-2">{r.appSym}</td>
+              <td className="border-b px-2 py-2 text-center capitalize">
                 {r.type}
               </td>
-              <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textAlign: "right",
-                }}
-              >
+              <td className="border-b px-2 py-2 text-right">
                 {toDecimalNumber(r.openPrice, r.decimal)}
               </td>
-              <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textAlign: "right",
-                }}
-              >
+              <td className="border-b px-2 py-2 text-right">
                 {toDecimalNumber(r.current, r.decimal)}
               </td>
+              <td className="border-b px-2 py-2 text-right">{r.quantity}</td>
+              <td className="border-b px-2 py-2 text-right">{r.leverage}</td>
               <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textAlign: "right",
-                }}
+                className={`border-b px-2 py-2 text-right ${
+                  r.pnlDec >= 0 ? "text-emerald-600" : "text-red-600"
+                }`}
               >
-                {r.quantity}
+                {r.pnlDec.toFixed(r.decimal)}
               </td>
-              <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textAlign: "right",
-                }}
-              >
-                {r.leverage}
-              </td>
-              <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textAlign: "right",
-                  color: r.pnlInt >= 0 ? "#16a34a" : "#dc2626",
-                }}
-              >
-                {toDecimalNumber(r.pnlInt, r.decimal)}
-              </td>
-              <td
-                style={{
-                  padding: 8,
-                  borderBottom: "1px solid #f5f5f5",
-                  textAlign: "right",
-                }}
-              >
-                <button
+              <td className="border-b px-2 py-2 text-right">
+                <Button
                   onClick={() => closeOrder(r.id)}
                   disabled={isClosing}
-                  style={{
-                    color: isClosing ? "#888" : "#fff",
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    border: "1px solid #eee",
-                  }}
+                  size="sm"
+                  variant="destructive"
                 >
                   Close
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
           {rows.length === 0 ? (
             <tr>
               <td
+                className="px-3 py-3 text-center text-muted-foreground"
                 colSpan={8}
-                style={{ padding: 12, color: "#888", textAlign: "center" }}
               >
                 No open orders
               </td>

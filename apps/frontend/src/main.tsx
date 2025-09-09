@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -18,10 +18,24 @@ const router = createBrowserRouter([
   { path: "*", element: <NotFound /> },
 ]);
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>
-);
+function Root() {
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
+    const isDark = stored ? stored === "dark" : prefersDark;
+    document.documentElement.classList.toggle("dark", isDark);
+  }, []);
+  return (
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(<Root />);
+
+export default Root;

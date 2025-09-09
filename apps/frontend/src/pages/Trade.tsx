@@ -1,3 +1,7 @@
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useSessionProbe } from "@/lib/session";
 import { useQuotesFeed, useQuotesStore, formatPrice } from "@/lib/quotesStore";
 import CandlesChart, { TimeframeSwitcher } from "@/components/CandlesChart";
@@ -14,11 +18,56 @@ export default function Trade() {
   useQuotesFeed();
   const { quotes, selectedSymbol, setSelectedSymbol } = useQuotesStore();
   const q = quotes[selectedSymbol];
+  const [showLeft, setShowLeft] = useState(true);
+  const [leftWidth, setLeftWidth] = useState(25);
+  const rightWidth = 25;
+
+  // Resizer state
+  const mainRef = useRef<HTMLDivElement | null>(null);
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+
+  const [chartRatio, setChartRatio] = useState(0.6); // 0..1
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [isResizingChart, setIsResizingChart] = useState(false);
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (isResizingLeft && mainRef.current) {
+        const rect = mainRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left; // px from left of grid
+        const total = rect.width;
+        // Clamp left width between 15% and 40%
+        const next = Math.max(15, Math.min(40, (x / total) * 100));
+        setLeftWidth(next);
+      }
+      if (isResizingChart && contentRef.current) {
+        const rect = contentRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top; // px from top of middle content
+        const total = rect.height;
+        const pos = Math.max(0, Math.min(1, y / total));
+        // Dragging up decreases chart (ratio goes down); dragging down increases chart
+        const ratio = Math.max(0.1, Math.min(0.9, pos));
+        setChartRatio(ratio);
+      }
+    }
+    function onMouseUp() {
+      setIsResizingLeft(false);
+      setIsResizingChart(false);
+    }
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isResizingLeft, isResizingChart]);
+
   const { data: usdBalance, isLoading: isBalanceLoading } = useUsdBalance();
   const openOrders = Object.values(useOpenOrdersStore((s) => s.ordersById));
-  const liveBalance = (() => {
+  const equity = (() => {
     const base = usdBalance ? usdBalance.balance : 0;
     let pnl = 0;
+    let margin = 0;
     for (const o of openOrders) {
       const appSym = backendToAppSymbol(o.asset);
       const lq = quotes[appSym];
@@ -27,82 +76,89 @@ export default function Trade() {
       pnl +=
         (o.type === "long" ? current - o.openPrice : o.openPrice - current) *
         o.quantity;
+      margin += o.margin || 0;
     }
-    return base + pnl;
+    return base + pnl + margin;
   })();
   return (
-    <div style={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <nav
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          height: 48,
-          borderBottom: "1px solid #eee",
-          padding: "0 12px",
-        }}
-      >
-        <div style={{ fontWeight: 700 }}>opex</div>
-        <div style={{ color: "#111", fontSize: 12, fontWeight: 600 }}>
-          Balance:{" "}
-          {isBalanceLoading
-            ? "Loading…"
-            : toDecimalNumber(liveBalance, usdBalance?.decimal ?? 4)}
+    <div className="h-screen w-screen overflow-hidden">
+      <nav className="flex h-12 items-center justify-between border-b px-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowLeft((v) => !v)}
+            aria-label={showLeft ? "Hide sidebar" : "Show sidebar"}
+          >
+            {showLeft ? (
+              <PanelLeftClose className="h-4 w-4" />
+            ) : (
+              <PanelLeftOpen className="h-4 w-4" />
+            )}
+          </Button>
+          <div className="font-bold">opex</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-foreground">
+            Available:{" "}
+            {isBalanceLoading
+              ? "Loading…"
+              : toDecimalNumber(
+                  usdBalance?.balance ?? 0,
+                  usdBalance?.decimal ?? 4
+                )}
+          </span>
+          <span className="text-xs font-semibold text-foreground">
+            Equity:{" "}
+            {isBalanceLoading
+              ? "Loading…"
+              : toDecimalNumber(equity, usdBalance?.decimal ?? 4)}
+          </span>
+          <ThemeToggle />
         </div>
       </nav>
       <main
+        ref={mainRef}
+        className="grid h-[calc(100vh-48px)] gap-2 p-2"
         style={{
-          display: "grid",
-          gridTemplateColumns: "25% 50% 25%",
-          gap: 8,
-          padding: 8,
-          height: "calc(100vh - 48px)",
+          gridTemplateColumns: showLeft
+            ? `${leftWidth}% 6px ${100 - rightWidth - leftWidth}% ${rightWidth}%`
+            : `1fr ${rightWidth}%`,
         }}
       >
-        {/* Left: Live Prices (25%) */}
-        <aside
-          style={{ border: "1px solid #eee", borderRadius: 8, padding: 8 }}
-        >
-          <h4 style={{ margin: 0, marginBottom: 6, fontSize: 14 }}>
-            Live Prices
-          </h4>
-          <QuotesTable />
-        </aside>
+        {/* Left: Live Prices */}
+        {showLeft ? (
+          <aside className="rounded-lg border p-2">
+            <h4 className="mb-1 mt-0 text-sm font-semibold">Live Prices</h4>
+            <QuotesTable />
+          </aside>
+        ) : null}
+        {showLeft ? (
+          <div
+            className="h-full w-1 cursor-col-resize justify-self-stretch bg-border"
+            onMouseDown={() => setIsResizingLeft(true)}
+          />
+        ) : null}
 
-        {/* Middle: Chart (top 60%) + empty bottom (50% width) */}
-        <section
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 8,
-            padding: 8,
-            minHeight: "70vh",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ display: "flex", gap: 6 }}>
+        {/* Middle: Chart and Open Orders with horizontal resizer */}
+        <section className="flex min-h-[70vh] flex-col gap-2 rounded-lg border p-2">
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1.5">
               {["BTCUSDC", "ETHUSDC", "SOLUSDC"].map((s) => (
                 <button
                   key={s}
                   onClick={() => setSelectedSymbol(s)}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    border:
-                      s === selectedSymbol
-                        ? "1px solid #646cff"
-                        : "1px solid #eee",
-                    background: s === selectedSymbol ? "#f5f6ff" : "#fff",
-                    fontSize: 12,
-                  }}
+                  className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
+                    s === selectedSymbol
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-secondary text-secondary-foreground hover:bg-accent"
+                  }`}
                 >
                   {s}
                 </button>
               ))}
             </div>
-            <div style={{ color: "#111", fontSize: 13 }}>
+            <div className="text-[13px] text-foreground">
               {q ? (
                 <>
                   Bid {formatPrice(q.bid_price, q.decimal)} · Ask{" "}
@@ -112,32 +168,35 @@ export default function Trade() {
                 <>Waiting for quotes…</>
               )}
             </div>
-            <div style={{ marginLeft: "auto" }}>
+            <div className="ml-auto">
               <TimeframeSwitcher />
             </div>
           </div>
-          <div style={{ flex: "0 0 60%" }}>
-            <CandlesChart symbol={selectedSymbol} />
-          </div>
-          <div
-            style={{
-              flex: 1,
-              borderTop: "1px solid #f2f2f2",
-              minHeight: 0,
-              overflow: "auto",
-            }}
-          >
-            <OpenOrders />
+          <div ref={contentRef} className="flex min-h-0 flex-1 flex-col">
+            <div
+              style={{
+                flex: `0 0 ${Math.round(chartRatio * 100)}%`,
+                minHeight: 80,
+              }}
+            >
+              <CandlesChart symbol={selectedSymbol} />
+            </div>
+            <div
+              className="z-10 h-3 -my-1 cursor-row-resize bg-border/70 hover:bg-primary/50 active:bg-primary select-none"
+              onMouseDown={() => setIsResizingChart(true)}
+            />
+            <div
+              className="min-h-0 flex-1 overflow-auto border-t"
+              style={{ minHeight: 80 }}
+            >
+              <OpenOrders />
+            </div>
           </div>
         </section>
 
-        {/* Right: Reserved (25%) */}
-        <aside
-          style={{ border: "1px solid #eee", borderRadius: 8, padding: 8 }}
-        >
-          <h4 style={{ margin: 0, marginBottom: 6, fontSize: 14 }}>
-            Open Trade
-          </h4>
+        {/* Right */}
+        <aside className="rounded-lg border p-2 mr-8">
+          <h4 className="mb-1 mt-0 text-sm font-semibold">Open Trade</h4>
           <TradeForm />
         </aside>
       </main>

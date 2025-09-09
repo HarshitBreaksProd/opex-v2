@@ -69,3 +69,27 @@ export function useKlines(symbol: string, interval: Interval, limit = 100) {
     enabled: Boolean(symbol && interval),
   });
 }
+
+export async function fetchKlinesBefore(
+  symbol: string,
+  interval: Interval,
+  endTimeSec: number,
+  limit = 100
+) {
+  const params = new URLSearchParams();
+  params.set("symbol", symbol);
+  params.set("interval", interval);
+  params.set("limit", String(limit));
+  if (endTimeSec) params.set("endTime", String(endTimeSec * 1000));
+  const url = `${KLINES_BASE}?${params.toString()}`;
+  if (import.meta.env.DEV) console.log("[klines.before]", { url });
+  const { data } = await axios.get(url, { withCredentials: false });
+  const out = (data as unknown as unknown[][]).map((d) => ({
+    time: Math.floor(Number(d[0]) / 1000),
+    open: Number(d[1]),
+    high: Number(d[2]),
+    low: Number(d[3]),
+    close: Number(d[4]),
+  })) as Kline[];
+  return out;
+}

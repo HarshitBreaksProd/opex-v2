@@ -62,7 +62,11 @@ export function useCloseOrder() {
     onSuccess: (orderId) => {
       remove(orderId);
       qc.invalidateQueries({ queryKey: ["openOrders"] });
-      qc.invalidateQueries({ queryKey: ["balance.usd"] });
+      // Refetch available balance; engine may update it asynchronously
+      qc.refetchQueries({ queryKey: ["balance.usd"], exact: true });
+      setTimeout(() => {
+        qc.refetchQueries({ queryKey: ["balance.usd"], exact: true });
+      }, 600);
     },
   });
 }
