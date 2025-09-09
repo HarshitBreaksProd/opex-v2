@@ -7,6 +7,8 @@ import {
   type IChartApi,
   type ISeriesApi,
   type UTCTimestamp,
+  type BusinessDay,
+  type Time,
 } from "lightweight-charts";
 import { useKlines, fetchKlinesBefore } from "@/lib/klines";
 import { useQuotesStore } from "@/lib/quotesStore";
@@ -42,6 +44,16 @@ export default function CandlesChart({ symbol }: Props) {
       textColor: isDark ? "#e5e7eb" : "#111827",
       background: { color: isDark ? "#0f172a" : "#ffffff" },
     } as const;
+  }
+
+  function toUnixSec(t: Time): number {
+    if (typeof t === "number") return t;
+    if (typeof t === "string") return Math.floor(new Date(t).getTime() / 1000);
+    const d = t as BusinessDay;
+    if (d && typeof d.year === "number") {
+      return Math.floor(Date.UTC(d.year, d.month - 1, d.day) / 1000);
+    }
+    return 0;
   }
 
   // fetch historical klines (seed data)
@@ -126,9 +138,12 @@ export default function CandlesChart({ symbol }: Props) {
       // When scrolled near the left edge, load more
       if (logical.from < 5) {
         loading = true;
-        const first = seriesRef.current!.dataByIndex(0, 0);
-        const firstTime = (first?.time as number | undefined) ?? range.from;
-        const endTimeSec = Math.max(0, Math.floor(firstTime) - 1);
+        const first =
+          (seriesRef.current as any).dataByIndex?.(0) ??
+          (seriesRef.current as any).data?.()[0];
+        const baseTime: Time = (first?.time ?? range.from) as Time;
+        const firstTimeSec = toUnixSec(baseTime);
+        const endTimeSec = Math.max(0, firstTimeSec - 1);
         try {
           const older = await fetchKlinesBefore(
             symbol,

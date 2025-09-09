@@ -10,7 +10,7 @@ type QuotesState = {
   quotes: QuotePayload;
 };
 
-export const useQuotesStore = create<QuotesState>((set, get) => ({
+export const useQuotesStore = create<QuotesState>((set) => ({
   selectedSymbol: "BTCUSDC",
   setSelectedSymbol: (s) => set({ selectedSymbol: s }),
   quotes: {},
