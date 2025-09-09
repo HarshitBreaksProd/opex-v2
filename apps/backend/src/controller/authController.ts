@@ -114,7 +114,7 @@ export const signinController = async (req: Request, res: Response) => {
 
     res.cookie("jwt", token);
     console.log(process.env.CORS_ORIGIN);
-    res.redirect(new URL("/trade", process.env.CORS_ORIGIN).toString());
+    res.redirect(new URL("/#/trade", process.env.CORS_ORIGIN).toString());
     return;
   } catch (err) {
     res.status(400).json({
