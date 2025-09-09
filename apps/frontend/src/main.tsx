@@ -1,22 +1,32 @@
-import { StrictMode, useEffect } from "react";
+import { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  createHashRouter,
+  RouterProvider,
+} from "react-router-dom";
 import Signup from "@/pages/Signup";
 import Trade from "@/pages/Trade";
 import NotFound from "@/pages/NotFound";
+import Unauthorized from "@/pages/Unauthorized";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-const router = createBrowserRouter([
+const routes = [
   { path: "/", element: <Signup /> },
   {
     element: <ProtectedRoute />,
     children: [{ path: "/trade", element: <Trade /> }],
   },
+  { path: "/unauthorized", element: <Unauthorized /> },
   { path: "*", element: <NotFound /> },
-]);
+];
+
+const router = (import.meta.env.PROD ? createHashRouter : createBrowserRouter)(
+  routes
+);
 
 function Root() {
   useEffect(() => {
@@ -28,11 +38,9 @@ function Root() {
     document.documentElement.classList.toggle("dark", isDark);
   }, []);
   return (
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   );
 }
 
