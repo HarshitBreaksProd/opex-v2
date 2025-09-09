@@ -30,11 +30,34 @@ export const openTradeController = async (req: Request, res: Response) => {
       reqId,
     });
 
-    const orderId = await responseLoopObj.waitForResponse(reqId);
-    res.json({ message: "trade executed", orderId });
+    const response = await responseLoopObj.waitForResponse(reqId);
+    const { order, orderId } = JSON.parse(response!);
+    console.log(order, orderId);
+    res.json({ message: "trade executed", order, orderId });
   } catch (err) {
     console.log(err);
     res.status(411).json({ message: "Trade not executed", err });
+  }
+};
+
+export const fetchOpenTrades = async (req: Request, res: Response) => {
+  console.log("fetching open trades");
+  const userId = (req as unknown as { userId: string }).userId;
+  const reqId = Date.now().toString() + crypto.randomUUID();
+
+  try {
+    await tradePusher.xAdd("stream:app:info", "*", {
+      type: "open-trades-fetch",
+      userId,
+      reqId,
+    });
+
+    const trades = await responseLoopObj.waitForResponse(reqId);
+    res.json({ message: "trades fetched", trades });
+    return;
+  } catch (err) {
+    console.log(err);
+    res.status(411).json({ message: "Trades not fetched", err });
   }
 };
 

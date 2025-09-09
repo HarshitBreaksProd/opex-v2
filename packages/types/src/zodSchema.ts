@@ -52,6 +52,11 @@ export const GetUserBalMsg = BaseMsg.extend({
   userId: z.string(),
 });
 
+export const OpenTradesFetchMsg = BaseMsg.extend({
+  type: z.literal("open-trades-fetch"),
+  userId: z.string(),
+});
+
 export const MessageSchema = z.discriminatedUnion("type", [
   UserAuthMsg,
   PriceUpdateMsg,
@@ -59,6 +64,7 @@ export const MessageSchema = z.discriminatedUnion("type", [
   TradeCloseMsg,
   GetAssetBalMsg,
   GetUserBalMsg,
+  OpenTradesFetchMsg,
 ]);
 
 export type Message = z.infer<typeof MessageSchema>;

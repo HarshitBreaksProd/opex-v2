@@ -6,6 +6,7 @@ import {
   PriceUpdateMsg,
   TradeCloseMsg,
   TradeOpenMsg,
+  OpenTradesFetchMsg,
   UserAuthMsg,
 } from "@repo/types/zodSchema";
 import {
@@ -163,6 +164,9 @@ export class Engine {
       case "get-user-bal":
         this.handleGetUserBal(GetUserBalMsg.parse(msg));
         break;
+      case "open-trades-fetch":
+        this.handleOpenTradesFetch(OpenTradesFetchMsg.parse(msg));
+        break;
     }
   }
 
@@ -187,6 +191,9 @@ export class Engine {
         break;
       case "get-user-bal":
         res = this.handleGetUserBal(GetUserBalMsg.parse(msg));
+        break;
+      case "open-trades-fetch":
+        res = this.handleOpenTradesFetch(OpenTradesFetchMsg.parse(msg));
         break;
     }
 
@@ -443,6 +450,7 @@ export class Engine {
       payload: {
         message: "Order Created",
         orderId,
+        order,
       },
     };
   }
@@ -553,6 +561,7 @@ export class Engine {
       payload: {
         message: "Order Closed",
         orderId,
+        userBal: this.userBalances[userId],
       },
     };
   }
@@ -601,5 +610,17 @@ export class Engine {
     }
 
     return { type: "get-user-bal-ack", reqId: msg.reqId, payload: { userBal } };
+  }
+
+  private handleOpenTradesFetch(
+    msg: z.infer<typeof OpenTradesFetchMsg>
+  ): EngineResponseType {
+    const userId = msg.userId;
+    const trades = this.openOrders[userId];
+    return {
+      type: "open-trades-fetch-ack",
+      reqId: msg.reqId,
+      payload: { trades },
+    };
   }
 }

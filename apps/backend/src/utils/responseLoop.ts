@@ -25,7 +25,7 @@ export class ResponseLoop {
         const reqType = res[0]?.messages[0]?.message.type;
         const gotId = res[0]!.messages[0]!.message.reqId!;
         let orderId;
-        console.log("Got a res");
+        // console.log("Got a res");
         // console.log(res[0]?.messages[0]);
 
         switch (reqType) {
@@ -43,17 +43,21 @@ export class ResponseLoop {
             delete this.idResponseMap[gotId];
             break;
           case "trade-open-ack":
-            orderId = JSON.parse(
+            let { order, orderId } = JSON.parse(
               res[0]?.messages[0]?.message.response!
-            ).orderId;
-            this.idResponseMap[gotId]!.resolve(orderId);
+            );
+            this.idResponseMap[gotId]!.resolve(
+              JSON.stringify({ order, orderId })
+            );
             delete this.idResponseMap[gotId];
             break;
           case "trade-close-ack":
-            orderId = JSON.parse(
+            let { userBal: userBalance, orderId: orderId2 } = JSON.parse(
               res[0]?.messages[0]?.message.response!
-            ).orderId;
-            this.idResponseMap[gotId]!.resolve(orderId);
+            );
+            this.idResponseMap[gotId]!.resolve(
+              JSON.stringify({ userBal: userBalance, orderId: orderId2 })
+            );
             delete this.idResponseMap[gotId];
             break;
           case "get-asset-bal-ack":
@@ -68,6 +72,13 @@ export class ResponseLoop {
               res[0]?.messages[0]?.message.response!
             ).userBal;
             this.idResponseMap[gotId]!.resolve(userBal);
+            delete this.idResponseMap[gotId];
+            break;
+          case "open-trades-fetch-ack":
+            const trades = JSON.parse(
+              res[0]?.messages[0]?.message.response!
+            ).trades;
+            this.idResponseMap[gotId]!.resolve(trades);
             delete this.idResponseMap[gotId];
             break;
         }

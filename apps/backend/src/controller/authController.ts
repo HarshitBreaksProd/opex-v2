@@ -67,6 +67,7 @@ export const emailGenController = async (req: Request, res: Response) => {
     });
     return;
   } catch (err) {
+    console.log(err);
     res.status(400).json({
       message: "Could not sign up, request timed out",
     });
@@ -111,7 +112,7 @@ export const signinController = async (req: Request, res: Response) => {
     await responseLoopObj.waitForResponse(reqId);
 
     res.cookie("jwt", token);
-    res.status(301).redirect("http://localhost:3000/trade/");
+    res.status(301).redirect(`${process.env.CORS_ORIGIN}/trade`);
     return;
   } catch (err) {
     res.status(400).json({
