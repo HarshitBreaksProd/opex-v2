@@ -86,7 +86,7 @@ export default function OpenOrders() {
                   r.pnlDec >= 0 ? "text-emerald-600" : "text-red-600"
                 }`}
               >
-                {r.pnlDec.toFixed(r.decimal)}
+                {(r.pnlDec * r.leverage).toFixed(r.decimal)}
               </td>
               <td className="border-b px-2 py-2 text-right">
                 <Button

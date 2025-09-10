@@ -47,7 +47,8 @@ export function useFetchOpenOrders() {
       setAll(orders);
       return orders;
     },
-    staleTime: 10_000,
+    refetchInterval: 2_500,
+    staleTime: 5_000,
   });
 }
 
