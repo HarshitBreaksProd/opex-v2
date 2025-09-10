@@ -75,7 +75,8 @@ export default function Trade() {
       const current = o.type === "long" ? lq.bid_price : lq.ask_price;
       pnl +=
         (o.type === "long" ? current - o.openPrice : o.openPrice - current) *
-        o.quantity;
+        o.quantity *
+        o.leverage;
       margin += o.margin || 0;
     }
     return base + pnl + margin;

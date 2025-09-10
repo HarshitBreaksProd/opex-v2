@@ -64,7 +64,7 @@ export const emailGenController = async (req: Request, res: Response) => {
     }
 
     res.json({
-      message: "Email sent",
+      message: "Email sent. Check your inbox and follow the link to log in.",
     });
     return;
   } catch (err) {

@@ -36,7 +36,7 @@ export const openTradeController = async (req: Request, res: Response) => {
     res.json({ message: "trade executed", order, orderId });
   } catch (err) {
     console.log(err);
-    res.status(411).json({ message: "Trade not executed", err });
+    res.status(411).json({ message: `Trade not executed, ${err}`, err });
   }
 };
 
@@ -57,7 +57,7 @@ export const fetchOpenTrades = async (req: Request, res: Response) => {
     return;
   } catch (err) {
     console.log(err);
-    res.status(411).json({ message: "Trades not fetched", err });
+    res.status(411).json({ message: `Trades not fetched, ${err}`, err });
   }
 };
 
@@ -89,7 +89,7 @@ export const closeTradeController = async (req: Request, res: Response) => {
     res.json({ message: "Trade Closed" });
   } catch (err) {
     console.log(err);
-    res.status(411).json({ message: "Trade Not executed" });
+    res.status(411).json({ message: `Trade Not executed, ${err}` });
   }
 };
 
@@ -107,7 +107,7 @@ export const fetchClosedTrades = async (req: Request, res: Response) => {
     console.log(err);
 
     res.status(411).json({
-      message: "Faced some error",
+      message: `Faced some error, ${err}`,
     });
   }
 };

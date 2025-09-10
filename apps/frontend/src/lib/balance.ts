@@ -13,6 +13,7 @@ export function useUsdBalance() {
       const dec = Number(data?.data?.decimal ?? 4);
       return { balance: bal, decimal: dec };
     },
-    staleTime: 10_000,
+    staleTime: 2_500,
+    refetchInterval: 2_500,
   });
 }

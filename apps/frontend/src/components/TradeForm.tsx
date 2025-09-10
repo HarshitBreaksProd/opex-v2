@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useQuotesStore } from "@/lib/quotesStore";
 import { appToBackendSymbol } from "@/lib/symbols";
-import { useOpenOrdersStore } from "@/lib/openOrdersStore";
+import { useOpenOrdersStore, type OpenOrder } from "@/lib/openOrdersStore";
 import { toDecimalNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +35,7 @@ export default function TradeForm() {
       const { data } = await api.post("/trade/open", payload);
       return data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { order: OpenOrder }) => {
       if (data?.order) {
         upsert(data.order);
       }
@@ -44,6 +44,8 @@ export default function TradeForm() {
       qc.invalidateQueries({ queryKey: ["openOrders"] });
     },
   });
+
+  console.log(error);
 
   return (
     <form
@@ -139,7 +141,8 @@ export default function TradeForm() {
       ) : null}
       {error ? (
         <div className="text-xs text-red-600">
-          {(error as Error).message || "Failed"}
+          {(error as unknown as { response: { data: { message: string } } })
+            .response.data.message || "Failed"}
         </div>
       ) : null}
     </form>
